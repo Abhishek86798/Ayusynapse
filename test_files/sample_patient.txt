@@ -1,0 +1,26 @@
+Patient Medical Report
+
+Patient ID: P001
+Age: 55 years
+Gender: Female
+
+Diagnosis:
+- Biliary cancer (cholangiocarcinoma)
+- Stage IIIB
+
+Laboratory Results:
+- HER2 status: Positive (IHC 3+)
+- Hemoglobin: 12.5 g/dL
+- White blood cells: 8.2 x10^9/L
+- Platelets: 250 x10^9/L
+
+Imaging:
+- CT scan: No evidence of CNS metastases
+- MRI abdomen: Confirms biliary cancer diagnosis
+
+Performance Status:
+- ECOG: 1
+
+Current Medications:
+- Pain management
+- Supportive care

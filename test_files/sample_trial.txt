@@ -1,0 +1,23 @@
+Clinical Trial Criteria
+
+Trial ID: NCT07062263
+Title: HER2+ Biliary Cancer Treatment Study
+
+Inclusion Criteria:
+- Age ≥ 18 years
+- HER2 positive status confirmed by IHC/ISH
+- Histologically confirmed biliary cancer
+- ECOG performance status ≤ 2
+- Adequate organ function
+
+Exclusion Criteria:
+- CNS metastases
+- Prior HER2-targeted therapy
+- Pregnancy or breastfeeding
+- Active infection requiring treatment
+
+Required Tests:
+- HER2 immunohistochemistry
+- Complete blood count (CBC)
+- Liver function tests
+- Imaging studies (CT/MRI)

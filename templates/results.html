@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trial Matching Results - Ayusynapse</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .result-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        .eligibility-badge {
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: white;
+            margin: 0 auto;
+        }
+        .score-high {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+        .score-medium {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+        }
+        .score-low {
+            background: linear-gradient(135deg, #dc3545, #e83e8c);
+        }
+        .explanation-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .patient-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .trial-item {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .trial-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+        .collapse-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .collapse-btn:hover {
+            color: #764ba2;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-12">
+                <div class="main-container p-5">
+                    <!-- Header -->
+                    <div class="text-center mb-5">
+                        <h1 class="display-4 fw-bold text-primary mb-3">
+                            <i class="fas fa-chart-line me-3"></i>Trial Matching Results
+                        </h1>
+                        <p class="lead">Analysis complete! Here are your trial matches with detailed explanations.</p>
+                    </div>
+
+                    <!-- Summary Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="stats-card">
+                                <i class="fas fa-file-medical fa-2x mb-3"></i>
+                                <h4>{{ trial_info.trials_count }}</h4>
+                                <p class="mb-0">Trials Analyzed</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card">
+                                <i class="fas fa-users fa-2x mb-3"></i>
+                                <h4>{{ patient_files|length }}</h4>
+                                <p class="mb-0">Patients Processed</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card">
+                                <i class="fas fa-check-circle fa-2x mb-3"></i>
+                                <h4 id="eligibleCount">0</h4>
+                                <p class="mb-0">Eligible Matches</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card">
+                                <i class="fas fa-clock fa-2x mb-3"></i>
+                                <h4 id="processingTime">~30s</h4>
+                                <p class="mb-0">Processing Time</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Back Button -->
+                    <div class="text-center mb-4">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Upload New Files
+                        </a>
+                    </div>
+
+                    <!-- Results for Each Patient -->
+                    {% for patient_result in matching_results %}
+                    <div class="result-card">
+                        <div class="card-body">
+                            <!-- Patient Header -->
+                            <div class="patient-section">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h3 class="mb-2">
+                                            <i class="fas fa-user-injured me-2"></i>
+                                            Patient: {{ patient_result.patient_filename }}
+                                        </h3>
+                                        <p class="mb-0 opacity-75">
+                                            <i class="fas fa-calendar me-2"></i>
+                                            Processed on {{ current_time }}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <span class="badge bg-light text-dark fs-6">
+                                            {{ patient_result.ranked_trials|length }} Trials Found
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Trial Results -->
+                            {% if patient_result.ranked_trials %}
+                                <div class="row">
+                                    {% for trial in patient_result.ranked_trials %}
+                                    <div class="col-lg-6 mb-4">
+                                        <div class="trial-item">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-3 text-center">
+                                                    <!-- Score Circle -->
+                                                    {% set score = trial.result.score %}
+                                                    {% if score >= 80 %}
+                                                        <div class="score-circle score-high">{{ score|int }}%</div>
+                                                    {% elif score >= 60 %}
+                                                        <div class="score-circle score-medium">{{ score|int }}%</div>
+                                                    {% else %}
+                                                        <div class="score-circle score-low">{{ score|int }}%</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-9">
+                                                    <h5 class="mb-2">{{ trial.trial_title }}</h5>
+                                                    <p class="text-muted mb-2">ID: {{ trial.trial_id }}</p>
+                                                    
+                                                    <!-- Eligibility Badge -->
+                                                    {% if trial.result.eligible %}
+                                                        <span class="eligibility-badge bg-success text-white">
+                                                            <i class="fas fa-check me-1"></i>ELIGIBLE
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="eligibility-badge bg-danger text-white">
+                                                            <i class="fas fa-times me-1"></i>NOT ELIGIBLE
+                                                        </span>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Quick Stats -->
+                                                    <div class="row mt-3">
+                                                        <div class="col-6">
+                                                            <small class="text-muted">Matched Criteria:</small>
+                                                            <br><strong>{{ trial.result.matched|length }}</strong>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <small class="text-muted">Missing Data:</small>
+                                                            <br><strong>{{ trial.result.missing|length }}</strong>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Expandable Explanation -->
+                                                    <div class="mt-3">
+                                                        <button class="collapse-btn" type="button" 
+                                                                data-bs-toggle="collapse" 
+                                                                data-bs-target="#explanation-{{ loop.index }}-{{ loop.parent.loop.index }}"
+                                                                aria-expanded="false">
+                                                            <i class="fas fa-info-circle me-1"></i>
+                                                            View Detailed Explanation
+                                                            <i class="fas fa-chevron-down ms-1"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Collapsible Explanation -->
+                                            <div class="collapse mt-3" id="explanation-{{ loop.index }}-{{ loop.parent.loop.index }}">
+                                                <div class="explanation-box">
+                                                    <h6 class="mb-3">
+                                                        <i class="fas fa-lightbulb me-2 text-warning"></i>
+                                                        Why this match?
+                                                    </h6>
+                                                    
+                                                    <!-- Matched Criteria -->
+                                                    {% if trial.result.matched %}
+                                                    <div class="mb-3">
+                                                        <h6 class="text-success">
+                                                            <i class="fas fa-check me-1"></i>Matched Criteria:
+                                                        </h6>
+                                                        <ul class="list-unstyled">
+                                                            {% for match in trial.result.matched %}
+                                                            <li class="mb-1">
+                                                                <i class="fas fa-circle text-success me-2" style="font-size: 0.5rem;"></i>
+                                                                {{ match }}
+                                                            </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Unmatched Criteria -->
+                                                    {% if trial.result.unmatched %}
+                                                    <div class="mb-3">
+                                                        <h6 class="text-warning">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>Unmatched Criteria:
+                                                        </h6>
+                                                        <ul class="list-unstyled">
+                                                            {% for unmatch in trial.result.unmatched %}
+                                                            <li class="mb-1">
+                                                                <i class="fas fa-circle text-warning me-2" style="font-size: 0.5rem;"></i>
+                                                                {{ unmatch }}
+                                                            </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Missing Data -->
+                                                    {% if trial.result.missing %}
+                                                    <div class="mb-3">
+                                                        <h6 class="text-info">
+                                                            <i class="fas fa-question-circle me-1"></i>Missing Information:
+                                                        </h6>
+                                                        <ul class="list-unstyled">
+                                                            {% for missing in trial.result.missing %}
+                                                            <li class="mb-1">
+                                                                <i class="fas fa-circle text-info me-2" style="font-size: 0.5rem;"></i>
+                                                                {{ missing }}
+                                                            </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Exclusions -->
+                                                    {% if trial.result.exclusions_triggered %}
+                                                    <div class="mb-3">
+                                                        <h6 class="text-danger">
+                                                            <i class="fas fa-ban me-1"></i>Exclusion Criteria Met:
+                                                        </h6>
+                                                        <ul class="list-unstyled">
+                                                            {% for exclusion in trial.result.exclusions_triggered %}
+                                                            <li class="mb-1">
+                                                                <i class="fas fa-circle text-danger me-2" style="font-size: 0.5rem;"></i>
+                                                                {{ exclusion }}
+                                                            </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Suggested Data -->
+                                                    {% if trial.result.suggested_data %}
+                                                    <div class="mt-3 p-3 bg-light rounded">
+                                                        <h6 class="text-primary">
+                                                            <i class="fas fa-clipboard-list me-1"></i>Suggested Additional Tests:
+                                                        </h6>
+                                                        <ul class="list-unstyled mb-0">
+                                                            {% for suggestion in trial.result.suggested_data %}
+                                                            <li class="mb-1">
+                                                                <i class="fas fa-arrow-right text-primary me-2"></i>
+                                                                {{ suggestion }}
+                                                            </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                    <h4 class="text-muted">No matching trials found</h4>
+                                    <p class="text-muted">Try uploading different patient reports or trial criteria.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Footer Actions -->
+                    <div class="text-center mt-5">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <a href="{{ url_for('index') }}" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-upload me-2"></i>Upload New Files
+                                </a>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-success w-100" onclick="exportResults()">
+                                    <i class="fas fa-download me-2"></i>Export Results
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-info w-100" onclick="printResults()">
+                                    <i class="fas fa-print me-2"></i>Print Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Count eligible matches
+        function updateStats() {
+            const eligibleElements = document.querySelectorAll('.eligibility-badge.bg-success');
+            document.getElementById('eligibleCount').textContent = eligibleElements.length;
+        }
+
+        // Export results
+        function exportResults() {
+            const data = {
+                trial_info: {{ trial_info|tojson }},
+                patient_files: {{ patient_files|tojson }},
+                matching_results: {{ matching_results|tojson }},
+                export_date: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'trial_matching_results.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Print results
+        function printResults() {
+            window.print();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+        });
+    </script>
+</body>
+</html>
