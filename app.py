@@ -27,6 +27,8 @@ from ayusynapse.matcher.predicates import PredicateEvaluator
 from ayusynapse.matcher.engine import MatchingEngine
 from ayusynapse.matcher.explain import TrialExplainer
 from ayusynapse.matcher.rank import TrialRanker
+from ayusynapse.matcher.trial_processor import TrialDataProcessor
+from ayusynapse.matcher.weighted_matcher import WeightedMatchingEngine, FeatureVector
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -156,76 +158,70 @@ def create_sample_patient_bundle(file_path):
     }
 
 def match_patients_to_trials(patient_bundles, trial_data):
-    """Match patients to trials using the matching pipeline"""
+    """Match patients to trials using the weighted matching pipeline"""
     try:
-        # Initialize components
-        feature_extractor = FeatureExtractor()
-        predicate_evaluator = PredicateEvaluator()
-        matching_engine = MatchingEngine()
-        explainer = TrialExplainer()
-        ranker = TrialRanker()
+        # Initialize weighted matching processor
+        processor = TrialDataProcessor()
         
-        all_results = []
-        
+        # Convert patient bundles to feature vectors
+        patients = []
         for patient_data in patient_bundles:
             if not patient_data['success']:
                 continue
-                
-            patient_bundle = patient_data['patient_bundle']
-            patient_filename = patient_data['filename']
             
-            # Extract patient features
-            patient_features = feature_extractor.extract_patient_features(patient_bundle)
+            # Create feature vector from patient bundle
+            patient_features = create_feature_vector_from_bundle(patient_data['patient_bundle'])
+            patients.append(patient_features)
+        
+        # Convert trial data to feature vectors
+        trials = []
+        for trial in trial_data['extracted_data'].get('trials', []):
+            # Create feature vector from trial data
+            trial_features = create_feature_vector_from_trial(trial)
+            trials.append(trial_features)
+        
+        if not patients or not trials:
+            return {
+                'success': False,
+                'error': 'No valid patients or trials found'
+            }
+        
+        # Initialize and run weighted matching
+        processor.initialize_matching_engine(patients, trials)
+        results = processor.match_patients_to_trials(patients, trials)
+        
+        # Convert results to expected format
+        all_results = []
+        for i, patient_results in enumerate(results):
+            if i < len(patient_bundles):
+                patient_filename = patient_bundles[i]['filename']
+            else:
+                patient_filename = f"patient_{i}"
             
-            # For each trial in the criteria
+            # Convert weighted matching results to trial results format
             trial_results = []
-            for trial in trial_data['extracted_data'].get('trials', []):
-                # Create trial predicates (simplified)
-                trial_predicates = {
-                    'inclusion': [
-                        {
-                            'type': 'Observation',
-                            'field': 'HER2',
-                            'op': '==',
-                            'value': 'positive',
-                            'weight': 3
-                        },
-                        {
-                            'type': 'Condition',
-                            'code': '363418001',  # Biliary cancer
-                            'op': 'present',
-                            'weight': 5
-                        }
-                    ],
-                    'exclusion': [
-                        {
-                            'type': 'Condition',
-                            'code': '128462008',  # CNS metastases
-                            'op': 'present',
-                            'weight': 10
-                        }
-                    ]
-                }
-                
-                # Evaluate trial
-                result = matching_engine.evaluate_trial(patient_features, trial_predicates)
-                
-                # Create explanation
-                explanation = explainer.make_explanation(result)
-                
+            for result in patient_results:
                 trial_results.append({
-                    'trial_id': trial.get('id', 'Unknown'),
-                    'trial_title': trial.get('title', 'Unknown Trial'),
-                    'result': result,
-                    'explanation': explanation
+                    'trial_id': f"trial_{result['trial_index']}",
+                    'trial_title': f"Trial {result['trial_index']}",
+                    'result': {
+                        'score': result['match_score'] * 100,  # Convert to percentage
+                        'eligible': result['is_eligible'],
+                        'confidence': result['confidence']
+                    },
+                    'explanation': {
+                        'feature_contributions': result['feature_contributions'],
+                        'match_score': result['match_score'],
+                        'confidence': result['confidence']
+                    }
                 })
             
-            # Rank trials
-            ranked_trials = ranker.rank_trials(trial_results, min_score=60)
+            # Sort by score
+            trial_results.sort(key=lambda x: x['result']['score'], reverse=True)
             
             all_results.append({
                 'patient_filename': patient_filename,
-                'ranked_trials': ranked_trials
+                'ranked_trials': trial_results
             })
         
         return {
@@ -234,12 +230,84 @@ def match_patients_to_trials(patient_bundles, trial_data):
         }
         
     except Exception as e:
-        logger.error(f"Error in matching pipeline: {e}")
+        logger.error(f"Error in weighted matching pipeline: {e}")
         traceback.print_exc()
         return {
             'success': False,
             'error': str(e)
         }
+
+def create_feature_vector_from_bundle(bundle):
+    """Create FeatureVector from FHIR bundle"""
+    features = FeatureVector()
+    
+    # Extract patient information
+    for entry in bundle.get('entry', []):
+        resource = entry.get('resource', {})
+        resource_type = resource.get('resourceType')
+        
+        if resource_type == 'Patient':
+            # Extract age and gender
+            if 'birthDate' in resource:
+                birth_date = resource['birthDate']
+                # Simple age calculation (in production, use proper date parsing)
+                features.age = 50  # Placeholder
+            
+            if 'gender' in resource:
+                features.gender = resource['gender']
+        
+        elif resource_type == 'Condition':
+            # Extract disease information
+            if 'code' in resource and 'coding' in resource['code']:
+                for coding in resource['code']['coding']:
+                    if 'display' in coding:
+                        features.disease = coding['display'].lower()
+                        break
+        
+        elif resource_type == 'Observation':
+            # Extract biomarkers and lab values
+            if 'code' in resource and 'coding' in resource['code']:
+                for coding in resource['code']['coding']:
+                    if 'code' in coding:
+                        code = coding['code']
+                        if code in ['HER2', 'ER', 'PR', 'BRCA1', 'BRCA2']:
+                            features.biomarkers.append(code)
+                        else:
+                            # Store as lab value
+                            if 'valueQuantity' in resource:
+                                features.lab_values[code] = resource['valueQuantity']['value']
+    
+    return features
+
+def create_feature_vector_from_trial(trial_data):
+    """Create FeatureVector from trial data"""
+    features = FeatureVector()
+    
+    # Extract trial information
+    if 'title' in trial_data:
+        title = trial_data['title'].lower()
+        if 'cancer' in title or 'carcinoma' in title:
+            features.disease = 'cancer'
+        elif 'diabetes' in title:
+            features.disease = 'diabetes'
+    
+    if 'inclusion_criteria' in trial_data:
+        criteria = trial_data['inclusion_criteria'].lower()
+        
+        # Extract age requirements
+        import re
+        age_match = re.search(r'(\d+)\s*-\s*(\d+)\s*years?', criteria)
+        if age_match:
+            min_age = float(age_match.group(1))
+            max_age = float(age_match.group(2))
+            features.age = (min_age + max_age) / 2
+        
+        # Extract biomarkers
+        for biomarker in ['HER2', 'ER', 'PR', 'BRCA1', 'BRCA2']:
+            if biomarker.lower() in criteria:
+                features.biomarkers.append(biomarker)
+    
+    return features
 
 @app.route('/')
 def index():

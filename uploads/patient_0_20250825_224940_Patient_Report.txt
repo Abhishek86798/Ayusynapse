@@ -1,0 +1,57 @@
+Patient Report
+
+Patient Name: Mr. Rajesh Kumar
+Age: 56 years
+Sex: Male
+Hospital ID: PEL-2025-0789
+Date of Admission: 12-Aug-2025
+Referring Physician: Dr. Meera Singh
+
+Presenting Complaint:
+Persistent pelvic pain, occasional hematuria, and fatigue for 2 months.
+
+Medical History:
+
+Hypertension (diagnosed 5 years ago, irregularly medicated)
+
+No known allergies
+
+Family history: Father had prostate issues (unspecified)
+
+Diagnostic Workup:
+
+Ultrasound pelvis: Heterogeneous mass noted in the left pelvic region, approx 4.2 x 3.5 cm.
+
+MRI pelvis: Confirms mass with possible invasion into surrounding soft tissue; lymph nodes slightly enlarged.
+
+Biopsy: Conflicting reports—Pathologist A: “Pelvic adenocarcinoma”; Pathologist B: “High-grade urothelial carcinoma”.
+
+Laboratory Investigations:
+
+CBC: Hemoglobin 11.2 g/dL, WBC 9,800/µL, Platelets 2.1 lakh/µL
+
+Renal function: Slightly elevated creatinine (1.4 mg/dL)
+
+Liver function: Within normal limits
+
+Diagnosis:
+Pelvic malignancy (primary origin uncertain: adenocarcinoma vs urothelial carcinoma).
+
+Treatment Plan:
+
+Patient started on concurrent chemoradiotherapy, but treatment schedule irregular due to missed sessions.
+
+Radiotherapy dose planned: 50 Gy in 25 fractions (documented, but some fractions not recorded).
+
+Chemotherapy: Cisplatin 40 mg/m² weekly (3 doses documented; 1 dose delayed).
+
+Notes:
+
+Patient reported mild nausea and occasional fatigue during treatment.
+
+Some imaging reports missing (CT scan not performed due to scheduling conflicts).
+
+Follow-up appointment: 20-Sep-2025
+
+Physician Comments:
+“Patient shows partial response on clinical assessment, but final outcome uncertain due to treatment interruptions. Histopathology discrepancies to be resolved with repeat biopsy.”
